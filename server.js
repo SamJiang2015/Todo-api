@@ -1,5 +1,6 @@
 var express = require('express');
 var bodyParser = require('body-parser');
+var _ = require('underscore');
 
 var app = express();
 var PORT = process.env.PORT || 3000;
@@ -7,7 +8,7 @@ var PORT = process.env.PORT || 3000;
 var todos = [];
 var todoNextId = 1;  // temp way to have a unique ID
 
-app.use(bodyParser.json()); // whenever a JSON request comes in, bodyParser middleware will parse it.
+app.use(bodyParser.json()) // whenever a JSON request comes in, bodyParser middleware will parse it.
 
 app.get('/',
 	function(req, res) {
@@ -24,13 +25,7 @@ app.get('/todos',
 app.get('/todos/:id', 
 	function(req, res) {
 		var todoId = parseInt(req.params.id, 10); 
-		var matchedTodo;
-
-		todos.forEach(function(todo) {
-			if (todo.id === todoId) {
-				matchedTodo = todo;
-			}
-		})
+		var matchedTodo = _.findWhere(todos, {id: todoId});
 
 		if (matchedTodo) {
 			res.json(matchedTodo);
@@ -41,13 +36,20 @@ app.get('/todos/:id',
 
 // POST /todos
 app.post('/todos', function(req, res) {
-	var newTodo = req.body;
+	var newTodo = _.pick(req.body, 'description', 'completed');
+	newTodo.description = newTodo.description.trim();
 
-	newTodo.id = todoNextId++;
+	if (_.isBoolean(newTodo.completed) && _.isString(newTodo.description) && newTodo.description.length > 0) {
 
-	todos.push(newTodo);
+		newTodo.id = todoNextId++;
+		todos.push(newTodo);
 
-	res.json(newTodo);
+		// send back the new todo in JSON form
+		res.json(newTodo);		
+	} else {
+		res.status(404).send();
+	} 
+
 });
 
 
