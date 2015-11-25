@@ -36,7 +36,7 @@ app.get('/todos/:id',
 
 // POST /todos
 app.post('/todos', function(req, res) {
-	var newTodo = _.pick(req.body, 'description', 'completed');  // getting ride of the unwanted properties a user might pass in
+	var newTodo = _.pick(req.body, 'description', 'completed');  // getting rid of the unwanted properties a user might pass in
 	newTodo.description = newTodo.description.trim();
 
 	if (_.isBoolean(newTodo.completed) && _.isString(newTodo.description) && newTodo.description.length > 0) {
@@ -55,8 +55,6 @@ app.post('/todos', function(req, res) {
 // DELETE /todos/:id 
 app.delete('/todos/:id', 
 	function(req, res) {
-		console.log('id is:' + req.params.id);
-
 		var todoId = parseInt(req.params.id, 10); 
 		var matchedTodo = _.findWhere(todos, {id: todoId});
 
@@ -66,6 +64,44 @@ app.delete('/todos/:id',
 			res.json(matchedTodo);
 		} else {
 			res.status(404).json({"error": "no todo found with that id"});
+		}		
+
+	});
+
+// PUT /todos/:id
+app.put('/todos/:id', 
+	function(req, res) {
+		var body = _.pick(req.body, 'description', 'completed');  // getting rid of the unwanted properties a user might pass in
+		var validAttributes = {};
+		var todoId = parseInt(req.params.id, 10); 
+		var matchedTodo = _.findWhere(todos, {id: todoId});
+
+
+		if (body.hasOwnProperty('completed') && _.isBoolean(body.completed)) {
+			validAttributes.completed = body.completed;
+		} else if (body.hasOwnProperty('completed')) {
+			return res.status(400).send();
+
+		} else {
+			// never provided attribute completed, no problem
+		}
+
+		if (body.hasOwnProperty('description') && _.isString(body.description) && body.description.trim().length > 0) {
+			validAttributes.description = body.description.trim();
+		} else if (body.hasOwnProperty('description')) {
+			return res.status(400).send();
+
+		} else {
+			// never provided attribute completed, no problem
+		}
+
+		// update the matchedTodo
+		if (matchedTodo) {
+			_.extend(matchedTodo, validAttributes);  // copy over properties from validAttributes to matchedTodo
+			res.json(matchedTodo);
+
+		} else {
+			return res.status(404).json({"error": "no todo found with that id"});
 		}		
 
 	});
