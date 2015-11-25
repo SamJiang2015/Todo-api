@@ -15,10 +15,22 @@ app.get('/',
 		res.send('Todo API Root');
 	});
 
-// GET /todos
+// GET /todos;  or /todos?completed=true
 app.get('/todos',
 	function(req, res) {
-		res.json(todos);  // will convert todos object into JSON and send
+		var queryParams = req.query;
+		var filteredTodos = todos;
+
+		if (queryParams.hasOwnProperty('completed') && queryParams.completed ==='true') {
+			filteredTodos = _.where(filteredTodos, {completed: true});
+		} else if (queryParams.hasOwnProperty('completed') && queryParams.completed ==='false') {
+			filteredTodos = _.where(filteredTodos, {completed: false});
+		} else if (queryParams.hasOwnProperty('completed')) {
+			//unrecognized completed value
+			res.status(400).send();
+		}
+
+		res.json(filteredTodos); 
 	});
 
 // GET /todos/:id
