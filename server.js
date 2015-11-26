@@ -20,43 +20,54 @@ app.get('/',
 app.get('/todos',
 	function(req, res) {
 		var queryParams = req.query;
-		var filteredTodos = todos;
+
+		var where = {};
 
 		if (queryParams.hasOwnProperty('completed') && queryParams.completed === 'true') {
-			filteredTodos = _.where(filteredTodos, {
-				completed: true
-			});
+			where.completed = true;
 		} else if (queryParams.hasOwnProperty('completed') && queryParams.completed === 'false') {
-			filteredTodos = _.where(filteredTodos, {
-				completed: false
-			});
-		} else if (queryParams.hasOwnProperty('completed')) {
-			//unrecognized completed value
-			res.status(400).send();
-		}
+			where.completed = false;
+		};
 
 		if (queryParams.hasOwnProperty('q') && queryParams.q.length > 0) {
-			filteredTodos = _.filter(filteredTodos, function(todo) {
-				return todo.description.toLowerCase().indexOf(queryParams.q.toLowerCase()) > -1;
-			})
+			where.description = {
+				$like: '%' + queryParams.q + '%'
+			};
 		}
 
-		res.json(filteredTodos);
+		db.todo.findAll({
+			where: where
+		}).then(
+			function(todos) {
+				if (todos) {
+					res.json(todos);
+				} else {
+					res.status(404).send();
+				}
+			},
+			function(e) {
+				res.status(500).json(e);
+			});
+
 	});
 
 // GET /todos/:id
 app.get('/todos/:id',
 	function(req, res) {
 		var todoId = parseInt(req.params.id, 10);
-		var matchedTodo = _.findWhere(todos, {
-			id: todoId
-		});
 
-		if (matchedTodo) {
-			res.json(matchedTodo);
-		} else {
-			res.status(404).send();
-		}
+		db.todo.findById(todoId).then(
+			function(todo) {
+				if (todo) {
+					res.json(todo);
+				} else {
+					res.status(404).send();
+				}
+			},
+			function(e) {
+				res.status(500).json(e);
+			}
+		);
 	});
 
 // POST /todos
@@ -67,22 +78,12 @@ app.post('/todos', function(req, res) {
 	console.log(db.todo);
 
 	db.todo.create(newTodo).
-		then(function (todo) {
-				res.json(todo.toJSON());
-			},
-			function (e) {
-				res.status(400).json(e);
-			});
-	// if (_.isBoolean(newTodo.completed) && _.isString(newTodo.description) && newTodo.description.length > 0) {
-
-	// 	newTodo.id = todoNextId++;
-	// 	todos.push(newTodo);
-
-	// 	// send back the new todo in JSON form
-	// 	res.json(newTodo);
-	// } else {
-	// 	res.status(404).send();
-	// }
+	then(function(todo) {
+			res.json(todo.toJSON());
+		},
+		function(e) {
+			res.status(400).json(e);
+		});
 
 });
 
