@@ -146,7 +146,7 @@ app.put('/todos/:id',
 				});
 	});
 
-//POST //users
+// add a user -- POST //users
 app.post('/users',
 	function(req, res) {
 
@@ -161,7 +161,28 @@ app.post('/users',
 			});
 	});
 
-db.sequelize.sync({force: true}).then(function() {
+// login POST /users/login 
+app.post('/users/login',
+	function(req, res) {
+		var body = _.pick(req.body, 'email', 'password');
+
+		// we will create a class method for authentication to keep the 
+		// path handler concise
+		db.user.authenticate(body)
+			.then(function(user) {
+					res.json(user.toPublicJSON());
+				},
+				function(e) {
+					res.status(401).send();
+				}
+			);
+	}
+);
+
+
+db.sequelize.sync({
+	force: true
+}).then(function() {
 
 	app.listen(PORT, function() {
 		console.log('Server started on port ' + PORT);
