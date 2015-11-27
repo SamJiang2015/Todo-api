@@ -60,7 +60,8 @@ app.get('/todos/:id',
 	function(req, res) {
 		var where = {
 			id: parseInt(req.params.id, 10),
-			userId: req.user.get('id')};
+			userId: req.user.get('id')
+		};
 
 		db.todo.findOne({
 			where: where
@@ -111,7 +112,8 @@ app.delete('/todos/:id',
 	function(req, res) {
 		var where = {
 			id: parseInt(req.params.id, 10),
-			userId: req.user.get('id')};
+			userId: req.user.get('id')
+		};
 
 		db.todo.destroy({
 			where: where,
@@ -140,7 +142,8 @@ app.put('/todos/:id',
 		var attributes = {};
 		var where = {
 			id: parseInt(req.params.id, 10),
-			userId: req.user.get('id')};
+			userId: req.user.get('id')
+		};
 
 		// build up the object containing valid attributes passed in by user
 		if (body.hasOwnProperty('completed')) {
@@ -191,26 +194,44 @@ app.post('/users',
 app.post('/users/login',
 	function(req, res) {
 		var body = _.pick(req.body, 'email', 'password');
+		var userInstance; // to save the user returned from authenticate call so that it can be used in chained then();
 
 		// we will create a class method for authentication to keep the 
 		// path handler concise
 		db.user.authenticate(body)
 			.then(function(user) {
-					var token = user.generateToken('authentication');
-					if (token) {
-						res.header('Auth', token).json(user.toPublicJSON());
-					} else {
-						res.status(401).send();
-					}
-				},
-				function(e) {
-					res.status(401).send();
-				}
-			);
-	}
-);
+				var token = user.generateToken('authentication');
+				userInstance = user;
 
-db.sequelize.sync({force: true}).then(function() {
+				return db.token.create({
+					token: token
+				});
+			})
+			.then(function(tokenInstance) {
+				res.header('Auth', tokenInstance.get('token')).json(userInstance.toPublicJSON());
+			})
+			.catch(function(e) {
+				res.status(401).send();
+			});
+	});
+
+// DELETE /users/login
+app.delete('/users/login',
+	middleware.requireAuthentication,
+	function(req, res) {
+
+		//delete the token instance
+		req.token.destroy().then(function(){
+			res.status(204).send();
+		}, function() {
+			res.status(500).send();
+		});
+	});
+
+
+db.sequelize.sync({
+	force: true
+}).then(function() {
 
 	app.listen(PORT, function() {
 		console.log('Server started on port ' + PORT);
