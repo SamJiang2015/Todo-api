@@ -2,6 +2,7 @@ var express = require('express');
 var bodyParser = require('body-parser');
 var _ = require('underscore');
 var db = require('./db.js');
+var middleware = require('./middleware.js')(db);
 
 var app = express();
 var PORT = process.env.PORT || 3000;
@@ -18,6 +19,7 @@ app.get('/',
 
 // GET /todos;  or /todos?completed=true&q=house
 app.get('/todos',
+	middleware.requireAuthentication,  // hook up the middleware
 	function(req, res) {
 		var queryParams = req.query;
 
@@ -53,6 +55,7 @@ app.get('/todos',
 
 // GET /todos/:id
 app.get('/todos/:id',
+	middleware.requireAuthentication,  // hook up the middleware
 	function(req, res) {
 		var todoId = parseInt(req.params.id, 10);
 
@@ -71,7 +74,9 @@ app.get('/todos/:id',
 	});
 
 // POST /todos
-app.post('/todos', function(req, res) {
+app.post('/todos', 
+	middleware.requireAuthentication,  // hook up the middleware
+	function(req, res) {
 	var newTodo = _.pick(req.body, 'description', 'completed'); // getting rid of the unwanted properties a user might pass in
 	newTodo.description = newTodo.description.trim();
 
@@ -87,6 +92,7 @@ app.post('/todos', function(req, res) {
 
 // DELETE /todos/:id 
 app.delete('/todos/:id',
+	middleware.requireAuthentication,  // hook up the middleware
 	function(req, res) {
 		var where = {};
 		where.id = parseInt(req.params.id, 10);
@@ -112,6 +118,7 @@ app.delete('/todos/:id',
 
 // PUT /todos/:id
 app.put('/todos/:id',
+	middleware.requireAuthentication,  // hook up the middleware
 	function(req, res) {
 		var body = _.pick(req.body, 'description', 'completed'); // getting rid of the unwanted properties a user might pass in
 		var attributes = {};
@@ -184,9 +191,7 @@ app.post('/users/login',
 	}
 );
 
-db.sequelize.sync({
-	force: true
-}).then(function() {
+db.sequelize.sync().then(function() {
 
 	app.listen(PORT, function() {
 		console.log('Server started on port ' + PORT);
