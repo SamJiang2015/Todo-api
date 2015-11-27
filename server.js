@@ -161,7 +161,7 @@ app.post('/users',
 			});
 	});
 
-// login POST /users/login 
+// POST /users/login 
 app.post('/users/login',
 	function(req, res) {
 		var body = _.pick(req.body, 'email', 'password');
@@ -170,7 +170,12 @@ app.post('/users/login',
 		// path handler concise
 		db.user.authenticate(body)
 			.then(function(user) {
-					res.json(user.toPublicJSON());
+					var token = user.generateToken('authentication');
+					if (token) {
+						res.header('Auth', token).json(user.toPublicJSON());
+					} else {
+						res.status(401).send();
+					}
 				},
 				function(e) {
 					res.status(401).send();
@@ -178,7 +183,6 @@ app.post('/users/login',
 			);
 	}
 );
-
 
 db.sequelize.sync({
 	force: true
