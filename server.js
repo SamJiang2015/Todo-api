@@ -154,14 +154,14 @@ app.post('/users',
 
 		db.user.create(newUser).
 		then(function(user) {
-				res.json(user.toJSON());
+				res.json(user.toPublicJSON());
 			},
 			function(e) {
 				res.status(400).json(e);
 			});
 	});
 
-db.sequelize.sync().then(function() {
+db.sequelize.sync({force: true}).then(function() {
 
 	app.listen(PORT, function() {
 		console.log('Server started on port ' + PORT);
