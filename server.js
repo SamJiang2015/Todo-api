@@ -75,8 +75,6 @@ app.post('/todos', function(req, res) {
 	var newTodo = _.pick(req.body, 'description', 'completed'); // getting rid of the unwanted properties a user might pass in
 	newTodo.description = newTodo.description.trim();
 
-	console.log(db.todo);
-
 	db.todo.create(newTodo).
 	then(function(todo) {
 			res.json(todo.toJSON());
@@ -146,6 +144,21 @@ app.put('/todos/:id',
 				function(e) {
 					res.status(500).json(e)
 				});
+	});
+
+//POST //users
+app.post('/users',
+	function(req, res) {
+
+		var newUser = _.pick(req.body, 'email', 'password'); // getting rid of the unwanted properties a user might pass in
+
+		db.user.create(newUser).
+		then(function(user) {
+				res.json(user.toJSON());
+			},
+			function(e) {
+				res.status(400).json(e);
+			});
 	});
 
 db.sequelize.sync().then(function() {
