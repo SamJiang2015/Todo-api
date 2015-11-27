@@ -15,7 +15,7 @@ if (env === 'production') {
 } else {
 	sequelize = new Sequelize(undefined, undefined, undefined, {
 		'dialect': 'sqlite',
-		'storage': __dirname + '/data/dev-to-api.sqlite'
+		'storage': __dirname + '/data/dev-todo-api.sqlite'
 	})
 }
 
@@ -27,5 +27,9 @@ db.user = sequelize.import(__dirname + '/models/user.js');
 
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
+
+// setting up association between todos and user
+db.todo.belongsTo(db.user);
+db.user.hasMany(db.todo);
 
 module.exports = db;

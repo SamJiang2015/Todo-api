@@ -19,11 +19,12 @@ app.get('/',
 
 // GET /todos;  or /todos?completed=true&q=house
 app.get('/todos',
-	middleware.requireAuthentication,  // hook up the middleware
+	middleware.requireAuthentication, // hook up the middleware
 	function(req, res) {
 		var queryParams = req.query;
-
-		var where = {};
+		var where = {
+			userId: req.user.get('id')
+		};
 
 		if (queryParams.hasOwnProperty('completed') && queryParams.completed === 'true') {
 			where.completed = true;
@@ -55,11 +56,15 @@ app.get('/todos',
 
 // GET /todos/:id
 app.get('/todos/:id',
-	middleware.requireAuthentication,  // hook up the middleware
+	middleware.requireAuthentication, // hook up the middleware
 	function(req, res) {
-		var todoId = parseInt(req.params.id, 10);
+		var where = {
+			id: parseInt(req.params.id, 10),
+			userId: req.user.get('id')};
 
-		db.todo.findById(todoId).then(
+		db.todo.findOne({
+			where: where
+		}).then(
 			function(todo) {
 				if (todo) {
 					res.json(todo);
@@ -74,29 +79,40 @@ app.get('/todos/:id',
 	});
 
 // POST /todos
-app.post('/todos', 
-	middleware.requireAuthentication,  // hook up the middleware
+app.post('/todos',
+	middleware.requireAuthentication, // hook up the middleware
 	function(req, res) {
-	var newTodo = _.pick(req.body, 'description', 'completed'); // getting rid of the unwanted properties a user might pass in
-	newTodo.description = newTodo.description.trim();
+		var newTodo = _.pick(req.body, 'description', 'completed'); // getting rid of the unwanted properties a user might pass in
+		newTodo.description = newTodo.description.trim();
 
-	db.todo.create(newTodo).
-	then(function(todo) {
-			res.json(todo.toJSON());
-		},
-		function(e) {
-			res.status(400).json(e);
-		});
+		db.todo.create(newTodo).
+		then(function(todo) {
+				req.user.addTodo(todo)
+					.then(function() {
+						// we do this because the todo has changed now that we added association with the user
+						// reload will return a new todo with the association info
+						return todo.reload();
+					}).then(function(todo) {
+						res.json(todo.toJSON());
+					}).catch(function(e) {
+						res.status(500).send();
+					});
 
-});
+			},
+			function(e) {
+				res.status(400).json(e);
+			});
+
+	});
 
 // DELETE /todos/:id 
 app.delete('/todos/:id',
-	middleware.requireAuthentication,  // hook up the middleware
+	middleware.requireAuthentication, // hook up the middleware
 	function(req, res) {
-		var where = {};
-		where.id = parseInt(req.params.id, 10);
-
+		var where = {
+			id: parseInt(req.params.id, 10),
+			userId: req.user.get('id')};
+			
 		db.todo.destroy({
 			where: where,
 			limit: 1
@@ -118,11 +134,13 @@ app.delete('/todos/:id',
 
 // PUT /todos/:id
 app.put('/todos/:id',
-	middleware.requireAuthentication,  // hook up the middleware
+	middleware.requireAuthentication, // hook up the middleware
 	function(req, res) {
 		var body = _.pick(req.body, 'description', 'completed'); // getting rid of the unwanted properties a user might pass in
 		var attributes = {};
-		var todoId = parseInt(req.params.id, 10);
+		var where = {
+			id: parseInt(req.params.id, 10),
+			userId: req.user.get('id')};
 
 		// build up the object containing valid attributes passed in by user
 		if (body.hasOwnProperty('completed')) {
@@ -134,23 +152,24 @@ app.put('/todos/:id',
 		}
 
 		// retrieve the model with the input id
-		db.todo.findById(todoId)
-			.then(function(todo) {
-					if (todo) {
-						todo.update(attributes).then(function(todo) {
-								res.json(todo.toJSON());
-							},
-							function(e) {
-								res.status(400).json(e);
-							}
-						);
-					} else {
-						res.status(404).send();
-					}
-				},
-				function(e) {
-					res.status(500).json(e)
-				});
+		db.todo.findOne({
+			where: where
+		}).then(function(todo) {
+				if (todo && todo.userId === req.user.id) {
+					todo.update(attributes).then(function(todo) {
+							res.json(todo.toJSON());
+						},
+						function(e) {
+							res.status(400).json(e);
+						}
+					);
+				} else {
+					res.status(404).send();
+				}
+			},
+			function(e) {
+				res.status(500).json(e)
+			});
 	});
 
 // add a user -- POST //users
